@@ -20,35 +20,44 @@ class AdminTopic {
     }
 
     public function create($data) {
+        // Lưu ý: Cột mô tả bây giờ là 'Description'
         $sql = "INSERT INTO topic (TopicName, Description) VALUES (?, ?)";
         $stmt = $this->conn->prepare($sql);
-        $stmt->bind_param("ss", $data['TopicName'], $data['Description']);
+        
+        $name = $data['TopicName'] ?? 'New Topic';
+        $desc = $data['Description'] ?? '';
+
+        $stmt->bind_param("ss", $name, $desc);
+        
         if (!$stmt->execute()) {
-            die("Error creating topic: " . $stmt->error);
+            error_log("Error creating topic: " . $stmt->error);
+            return false;
         }
+        return true;
     }
 
     public function update($id, $data) {
         $sql = "UPDATE topic SET TopicName = ?, Description = ? WHERE TopicID = ?";
         $stmt = $this->conn->prepare($sql);
-        $stmt->bind_param("ssi", $data['TopicName'], $data['Description'], $id);
-        if (!$stmt->execute()) {
-            die("Error updating topic: " . $stmt->error);
-        }
+        
+        $name = $data['TopicName'];
+        $desc = $data['Description'];
+
+        $stmt->bind_param("ssi", $name, $desc, $id);
+        return $stmt->execute();
     }
 
     public function delete($id) {
-        // First delete related chat history
-        $stmt = $this->conn->prepare("DELETE FROM chathistory WHERE TopicID = ?");
-        $stmt->bind_param("i", $id);
-        $stmt->execute();
+        // Xóa lịch sử chat liên quan đến Topic này trước
+        $stmtHistory = $this->conn->prepare("DELETE FROM chathistory WHERE TopicID = ?");
+        $stmtHistory->bind_param("i", $id);
+        $stmtHistory->execute();
+        $stmtHistory->close();
         
-        // Then delete the topic
+        // Sau đó xóa Topic
         $stmt = $this->conn->prepare("DELETE FROM topic WHERE TopicID = ?");
         $stmt->bind_param("i", $id);
-        if (!$stmt->execute()) {
-            die("Error deleting topic: " . $stmt->error);
-        }
+        return $stmt->execute();
     }
 }
 ?>

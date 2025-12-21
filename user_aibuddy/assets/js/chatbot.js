@@ -7,7 +7,7 @@ let currentSessionId = null;
 let currentImageBase64 = null; // Biến lưu chuỗi ảnh
 
 // Base path cho API
-const API_BASE = '../../../api/chatbot/';
+const API_BASE = 'api/chatbot/';
 
 // Voice Config
 let isCallActive = false; // Trạng thái cuộc gọi
@@ -15,7 +15,7 @@ let recognition;
 let synth = window.speechSynthesis;
 let silenceTimer;
 
-// --- INIT ---
+// --- INIT --- 
 document.addEventListener('DOMContentLoaded', () => {
     setupUIToggles();
     loadChatHistory(); 
@@ -31,26 +31,21 @@ function setupUIToggles() {
     const toolsToggle = document.getElementById('tools-toggle');
     const sidebarLeft = document.getElementById('sidebar-left');
     const sidebarRight = document.getElementById('sidebar-right');
-    const textarea = document.getElementById('message-input');
     
+    // Nút mở lịch sử (Trái)
     if(menuToggle) {
         menuToggle.addEventListener('click', () => {
             sidebarLeft.classList.toggle('is-open');
-            if (window.innerWidth <= 768) sidebarRight.classList.remove('is-open');
+            // Đóng bên phải nếu đang mở để đỡ rối
+            if(sidebarRight) sidebarRight.classList.remove('is-open');
         });
     }
     
+    // Nút mở Persona/Topic (Phải)
     if(toolsToggle) {
         toolsToggle.addEventListener('click', () => {
             sidebarRight.classList.toggle('is-open');
-            if (window.innerWidth <= 768) sidebarLeft.classList.remove('is-open');
-        });
-    }
-
-    if(textarea) {
-        textarea.addEventListener('input', () => {
-            textarea.style.height = 'auto'; 
-            textarea.style.height = (textarea.scrollHeight) + 'px';
+            if(sidebarLeft) sidebarLeft.classList.remove('is-open');
         });
     }
 }

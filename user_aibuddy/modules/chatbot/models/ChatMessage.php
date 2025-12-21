@@ -8,32 +8,31 @@ class ChatMessage {
         $this->pdo = $pdo;
     }
 
-    // Lưu tin nhắn (của User hoặc AI)
+    // Lưu tin nhắn
     public function save($sessionId, $sender, $content, $imagePath = null) {
-        $sql = "INSERT INTO ChatMessages (SessionID, Sender, Content, ImagePath) VALUES (?, ?, ?, ?)";
+        $sql = "INSERT INTO chatmessages (SessionID, Sender, Content, ImagePath) VALUES (?, ?, ?, ?)";
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute([$sessionId, $sender, $content, $imagePath]);
         return $this->pdo->lastInsertId();
     }
 
-    // Lấy toàn bộ tin nhắn của 1 session (để hiển thị lên màn hình chat)
+    // Lấy tin nhắn của session
     public function getBySessionId($sessionId) {
         $sql = "SELECT Sender, Content, CreatedAt, AudioUrl, ImagePath 
-                FROM ChatMessages 
+                FROM chatmessages 
                 WHERE SessionID = ? 
                 ORDER BY CreatedAt ASC";
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute([$sessionId]);
-        return $stmt->fetchAll();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    // Lấy ngữ cảnh hội thoại gần nhất (Memory cho AI)
-    // Logic này lấy từ hàm getConversationContext cũ
-    public function getRecentContext($userId, $limit = 30) {
-        // Lấy X tin nhắn gần nhất CỦA USER (Bất kể session nào - Global Memory)
+    // Lấy ngữ cảnh (Memory) cho AI
+    public function getRecentContext($userId, $limit = 20) {
+        // Join giữa chatmessages và chatsessions để lấy tin của đúng User đó
         $sql = "SELECT m.Sender, m.Content, s.SessionID 
-                FROM ChatMessages m
-                JOIN ChatSessions s ON m.SessionID = s.SessionID
+                FROM chatmessages m
+                JOIN chatsessions s ON m.SessionID = s.SessionID
                 WHERE s.UserID = ? 
                 ORDER BY m.CreatedAt DESC 
                 LIMIT ?";
@@ -44,21 +43,19 @@ class ChatMessage {
         $stmt->execute();
         
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        
-        // Đảo ngược để đúng thứ tự thời gian (Cũ nhất -> Mới nhất)
-        $rows = array_reverse($rows);
+        $rows = array_reverse($rows); // Đảo ngược để xếp theo thứ tự thời gian
 
         $contextString = "";
         $currentSession = null;
 
         foreach ($rows as $msg) {
-            // Thêm dấu ngăn cách nếu chuyển sang session khác
             if ($currentSession !== $msg['SessionID']) {
                 $contextString .= "\n[--- Conversation Segment ---]\n";
                 $currentSession = $msg['SessionID'];
             }
-
+            // Chuẩn hóa Sender để AI dễ hiểu
             $role = ($msg['Sender'] === 'User') ? 'User' : 'AI';
+            // Xóa ký tự xuống dòng thừa để prompt gọn hơn
             $cleanContent = str_replace(["\r", "\n"], " ", $msg['Content']);
             $contextString .= "$role: $cleanContent\n";
         }

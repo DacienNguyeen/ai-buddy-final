@@ -539,3 +539,94 @@ nav a:hover, nav a.active {
   .chat-window { padding: 15px; }
   .message { max-width: 85%; }
 }
+
+/* --- RESPONSIVE MOBILE STYLES --- */
+
+/* Mặc định ẩn header mobile trên PC */
+.mobile-header {
+    display: none;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 15px;
+    background-color: var(--primary); /* Hoặc màu chủ đạo của bạn */
+    color: white;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    height: 60px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.mobile-title {
+    font-weight: bold;
+    font-size: 1.2rem;
+}
+
+/* --- MEDIA QUERY CHO ĐIỆN THOẠI (Dưới 768px) --- */
+@media (max-width: 768px) {
+    /* Hiển thị header mobile */
+    .mobile-header {
+        display: flex;
+    }
+
+    /* 1. Sidebar Trái (Lịch sử chat) */
+    #sidebar-left {
+        position: fixed;
+        top: 60px; /* Chừa chỗ cho header */
+        left: 0;
+        bottom: 0;
+        width: 280px;
+        z-index: 999;
+        transform: translateX(-100%); /* Ẩn sang trái */
+        transition: transform 0.3s ease-in-out;
+        box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+    }
+
+    #sidebar-left.is-open {
+        transform: translateX(0); /* Hiện ra khi có class is-open */
+    }
+
+    /* 2. Sidebar Phải (Persona/Topic) */
+    #sidebar-right {
+        position: fixed;
+        top: 60px;
+        right: 0;
+        bottom: 0;
+        width: 280px;
+        z-index: 999;
+        transform: translateX(100%); /* Ẩn sang phải */
+        transition: transform 0.3s ease-in-out;
+        box-shadow: -2px 0 10px rgba(0,0,0,0.1);
+        background: #fff; /* Đảm bảo có nền không bị trong suốt */
+    }
+
+    #sidebar-right.is-open {
+        transform: translateX(0);
+    }
+
+    /* 3. Khu vực Chat chính */
+    .chat-container {
+        margin-top: 60px; /* Đẩy xuống tránh header che */
+        height: calc(100vh - 60px);
+    }
+    
+    #chat-area {
+        width: 100%;
+        margin: 0;
+        padding: 10px;
+    }
+
+    /* Overlay làm mờ nền khi mở menu (Optional) */
+    .sidebar-overlay {
+        display: none;
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.5);
+        z-index: 998;
+    }
+    .sidebar-overlay.active {
+        display: block;
+    }
+}
