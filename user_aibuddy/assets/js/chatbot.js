@@ -1,7 +1,6 @@
 /* public/js/chatbot.js */
 
 // --- CONFIGURATION ---
-const CURRENT_USER_ID = 1; 
 let currentPersonaId = 1;  // Default: Bestie
 let currentTopicId = 1;    
 let currentSessionId = null;

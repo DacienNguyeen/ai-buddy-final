@@ -2,7 +2,7 @@
 // modules/chatbot/controllers/ChatController.php
 
 // 1. Load các thành phần phụ thuộc
-require_once __DIR__ . '/../../../config/database.php';
+require_once __DIR__ . '/../../../config/db_pdo.php';
 require_once __DIR__ . '/../models/GeminiService.php';
 require_once __DIR__ . '/../models/ChatSession.php';
 require_once __DIR__ . '/../models/ChatMessage.php';
