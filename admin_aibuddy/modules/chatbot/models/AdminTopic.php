@@ -23,20 +23,32 @@ class AdminTopic {
         $sql = "INSERT INTO topic (TopicName, Description) VALUES (?, ?)";
         $stmt = $this->conn->prepare($sql);
         $stmt->bind_param("ss", $data['TopicName'], $data['Description']);
-        $stmt->execute();
+        if (!$stmt->execute()) {
+            die("Error creating topic: " . $stmt->error);
+        }
     }
 
     public function update($id, $data) {
         $sql = "UPDATE topic SET TopicName = ?, Description = ? WHERE TopicID = ?";
         $stmt = $this->conn->prepare($sql);
         $stmt->bind_param("ssi", $data['TopicName'], $data['Description'], $id);
-        $stmt->execute();
+        if (!$stmt->execute()) {
+            die("Error updating topic: " . $stmt->error);
+        }
     }
 
     public function delete($id) {
-        $stmt = $this->conn->prepare("DELETE FROM topic WHERE TopicID = ?");
+        // First delete related chat history
+        $stmt = $this->conn->prepare("DELETE FROM chathistory WHERE TopicID = ?");
         $stmt->bind_param("i", $id);
         $stmt->execute();
+        
+        // Then delete the topic
+        $stmt = $this->conn->prepare("DELETE FROM topic WHERE TopicID = ?");
+        $stmt->bind_param("i", $id);
+        if (!$stmt->execute()) {
+            die("Error deleting topic: " . $stmt->error);
+        }
     }
 }
 ?>

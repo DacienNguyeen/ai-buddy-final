@@ -20,12 +20,15 @@ class AdminPersona {
     }
 
     public function create($data) {
-        $sql = "INSERT INTO Personas (PersonaName, Description, SystemPrompt, Icon, IsPremium) VALUES (?, ?, ?, ?, ?)";
+        $sql = "INSERT INTO persona (PersonaName, Description, SystemPrompt, Icon, IsPremium) VALUES (?, ?, ?, ?, ?)";
         $stmt = $this->conn->prepare($sql);
         $isPremium = isset($data['IsPremium']) ? 1 : 0;
         $stmt->bind_param("sssss", $data['PersonaName'], $data['Description'], $data['SystemPrompt'], $data['Icon'], $isPremium);
-        $stmt->execute();
-        return $this->conn->insert_id;
+        if ($stmt->execute()) {
+            return $this->conn->insert_id;
+        } else {
+            die("Error creating persona: " . $stmt->error);
+        }
     }
 
     public function update($id, $data) {
@@ -33,13 +36,23 @@ class AdminPersona {
         $stmt = $this->conn->prepare($sql);
         $isPremium = isset($data['IsPremium']) ? 1 : 0;
         $stmt->bind_param("sssssi", $data['PersonaName'], $data['Description'], $data['SystemPrompt'], $data['Icon'], $isPremium, $id);
-        $stmt->execute();
+        if (!$stmt->execute()) {
+            die("Error updating persona: " . $stmt->error);
+        }
     }
 
     public function delete($id) {
-        $stmt = $this->conn->prepare("DELETE FROM persona WHERE PersonaID = ?");
+        // First delete related chat history
+        $stmt = $this->conn->prepare("DELETE FROM chathistory WHERE PersonaID = ?");
         $stmt->bind_param("i", $id);
         $stmt->execute();
+        
+        // Then delete the persona
+        $stmt = $this->conn->prepare("DELETE FROM persona WHERE PersonaID = ?");
+        $stmt->bind_param("i", $id);
+        if (!$stmt->execute()) {
+            die("Error deleting persona: " . $stmt->error);
+        }
     }
 }
 ?>
