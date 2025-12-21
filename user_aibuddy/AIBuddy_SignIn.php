@@ -25,17 +25,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($user && password_verify($password, $user['UserPassword'])) {
             // --- ĐĂNG NHẬP THÀNH CÔNG ---
             
-            // Lưu session
+            // Lưu session (Lưu ý: key là 'userid' chữ thường)
             $_SESSION['userid'] = $user['UserID'];
             $_SESSION['username'] = $user['UserName'];
             
             // Đóng session để đảm bảo dữ liệu được lưu ngay lập tức
             session_write_close();
 
-            // --- SỬA LỖI TẠI ĐÂY: Dùng JavaScript để chuyển trang ---
+            // --- SỬA FLOW TẠI ĐÂY: Chuyển hướng thẳng sang Chatbot ---
             echo "<script>
-                    alert('Đăng nhập thành công!'); 
-                    window.location.href = 'AIBuddy_Profile.php';
+                    // alert('Đăng nhập thành công!'); // Có thể bỏ alert nếu muốn trải nghiệm mượt hơn
+                    window.location.href = 'AIBuddy_Chatbot.php';
                   </script>";
             exit();
             
@@ -49,7 +49,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 
