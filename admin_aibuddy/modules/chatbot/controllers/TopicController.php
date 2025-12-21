@@ -1,13 +1,13 @@
 <?php
-require_once __DIR__ . '/../../../config/database.php';
+require_once __DIR__ . '/../../../config/db.php';
 require_once __DIR__ . '/../models/AdminTopic.php';
 
 class TopicController {
     private $model;
 
     public function __construct() {
-        global $pdo;
-        $this->model = new AdminTopic($pdo);
+        global $conn;
+        $this->model = new AdminTopic($conn);
     }
 
     public function index() {

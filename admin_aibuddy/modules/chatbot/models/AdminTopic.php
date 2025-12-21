@@ -1,37 +1,42 @@
 <?php
 class AdminTopic {
-    private $pdo;
+    private $conn;
 
-    public function __construct($pdo) {
-        $this->pdo = $pdo;
+    public function __construct($conn) {
+        $this->conn = $conn;
     }
 
     public function getAll() {
-        $stmt = $this->pdo->query("SELECT * FROM Topics ORDER BY CreatedAt DESC");
-        return $stmt->fetchAll();
+        $result = $this->conn->query("SELECT * FROM topic ORDER BY TopicID DESC");
+        return $result->fetch_all(MYSQLI_ASSOC);
     }
 
     public function getById($id) {
-        $stmt = $this->pdo->prepare("SELECT * FROM Topics WHERE TopicID = ?");
-        $stmt->execute([$id]);
-        return $stmt->fetch();
+        $stmt = $this->conn->prepare("SELECT * FROM topic WHERE TopicID = ?");
+        $stmt->bind_param("i", $id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        return $result->fetch_assoc();
     }
 
     public function create($data) {
-        $sql = "INSERT INTO Topics (TopicName, Description) VALUES (?, ?)";
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([$data['TopicName'], $data['Description']]);
+        $sql = "INSERT INTO topic (TopicName, Description) VALUES (?, ?)";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param("ss", $data['TopicName'], $data['Description']);
+        $stmt->execute();
     }
 
     public function update($id, $data) {
-        $sql = "UPDATE Topics SET TopicName = ?, Description = ? WHERE TopicID = ?";
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([$data['TopicName'], $data['Description'], $id]);
+        $sql = "UPDATE topic SET TopicName = ?, Description = ? WHERE TopicID = ?";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param("ssi", $data['TopicName'], $data['Description'], $id);
+        $stmt->execute();
     }
 
     public function delete($id) {
-        $stmt = $this->pdo->prepare("DELETE FROM Topics WHERE TopicID = ?");
-        $stmt->execute([$id]);
+        $stmt = $this->conn->prepare("DELETE FROM topic WHERE TopicID = ?");
+        $stmt->bind_param("i", $id);
+        $stmt->execute();
     }
 }
 ?>

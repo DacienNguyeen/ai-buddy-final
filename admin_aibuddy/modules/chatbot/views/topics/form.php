@@ -8,17 +8,22 @@ if (isset($_GET['id'])) {
     $topic = $controller->edit($_GET['id']);
 }
 
-$path = '../';
-include __DIR__ . '/../layouts/header.php';
+// Include common header and sidebar
+include __DIR__ . '/../../../../includes/header.php';
+include __DIR__ . '/../../../../includes/sidebar.php';
 ?>
 
-<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-    <h1 class="h2"><?php echo $topic ? 'Edit Topic' : 'Create New Topic'; ?></h1>
-    <a href="index.php" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Back</a>
-</div>
+<div class="main-content">
+    <div class="top-navbar">
+        <h2><?php echo $topic ? 'Edit Topic' : 'Create New Topic'; ?></h2>
+    </div>
 
-<div class="card shadow-sm col-md-8 mx-auto">
-    <div class="card-body">
+    <div class="card-box">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h3><?php echo $topic ? 'Edit Topic Details' : 'Add New Topic'; ?></h3>
+            <a href="index.php" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Back to List</a>
+        </div>
+
         <form method="POST">
             <?php if ($topic): ?>
                 <input type="hidden" name="TopicID" value="<?php echo $topic['TopicID']; ?>">
@@ -39,4 +44,4 @@ include __DIR__ . '/../layouts/header.php';
     </div>
 </div>
 
-<?php include __DIR__ . '/../layouts/footer.php'; ?>
+<?php include __DIR__ . '/../../../../includes/footer.php'; ?>

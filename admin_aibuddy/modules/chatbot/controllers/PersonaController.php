@@ -1,13 +1,13 @@
 <?php
-require_once __DIR__ . '/../../../config/database.php';
+require_once __DIR__ . '/../../../config/db.php';
 require_once __DIR__ . '/../models/AdminPersona.php';
 
 class PersonaController {
     private $model;
 
     public function __construct() {
-        global $pdo;
-        $this->model = new AdminPersona($pdo);
+        global $conn;
+        $this->model = new AdminPersona($conn);
     }
 
     // Lấy danh sách cho trang Index

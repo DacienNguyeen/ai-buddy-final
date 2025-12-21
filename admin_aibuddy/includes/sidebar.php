@@ -1,3 +1,7 @@
+<?php
+// includes/sidebar.php
+require_once __DIR__ . '/../config/db.php';
+?>
 <div class="sidebar">
     
     <div class="brand">
@@ -34,10 +38,25 @@
     <i class="fa-solid fa-face-smile"></i>
     <span>EmoteTracker Management</span>
 </a>
-    <a href="<?php echo BASE_URL; ?>modules/chatbot/index.php">
-    <i class="fa-solid fa-robot"></i>
-    <span>Chatbots</span>
-</a>
+    
+    <details class="sidebar-submenu">
+        <summary>
+            <i class="fa-solid fa-robot"></i>
+            <span>Chatbots</span>
+        </summary>
+        <a href="<?php echo BASE_URL; ?>modules/chatbot/views/dashboard.php" class="<?php echo strpos($_SERVER['REQUEST_URI'], 'modules/chatbot/views/dashboard') !== false ? 'active' : ''; ?>">
+            <i class="fa-solid fa-tachometer-alt"></i>
+            <span>Dashboard</span>
+        </a>
+        <a href="<?php echo BASE_URL; ?>modules/chatbot/views/personas/index.php" class="<?php echo strpos($_SERVER['REQUEST_URI'], 'modules/chatbot/views/personas') !== false ? 'active' : ''; ?>">
+            <i class="fa-solid fa-users-cog"></i>
+            <span>Personas</span>
+        </a>
+        <a href="<?php echo BASE_URL; ?>modules/chatbot/views/topics/index.php" class="<?php echo strpos($_SERVER['REQUEST_URI'], 'modules/chatbot/views/topics') !== false ? 'active' : ''; ?>">
+            <i class="fa-solid fa-list-alt"></i>
+            <span>Topics</span>
+        </a>
+    </details>
     
    
     

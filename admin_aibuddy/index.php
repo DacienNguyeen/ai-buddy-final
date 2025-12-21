@@ -159,7 +159,7 @@ if($check_report->num_rows > 0){
                 </div>
             </a>
 
-            <a href="modules/chatbot/persona.php" class="card-menu">
+            <a href="modules/chatbot/views/personas/index.php" class="card-menu">
                 <div class="card-header-bg" style="background: #27ae60;">
                     <span>AI Personas</span>
                     <i class="fa-solid fa-masks-theater"></i>
