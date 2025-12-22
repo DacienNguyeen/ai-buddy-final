@@ -490,38 +490,38 @@ nav a.active::after {
   color: #fff;
 }
 
-/* PERSONA LOCKED STYLES */
-.persona-card.locked {
-  background-color: #f9f9f9;
-  border-color: #eee;
-  opacity: 0.7;
-  cursor: not-allowed; /* Biểu tượng cấm */
-  position: relative;
+/* --- PERSONA LOCKED STATES --- */
+
+/* 1. Thẻ bị khóa */
+.persona-card.locked-persona {
+    opacity: 0.6;
+    background-color: #f5f5f5;
+    cursor: not-allowed;
+    border: 1px dashed #ccc;
 }
 
-.persona-card.locked:hover {
-  transform: none; /* Không nảy lên khi hover */
-  box-shadow: none;
-  border-color: #eee;
+.persona-card.locked-persona:hover {
+    transform: none;
+    box-shadow: none;
+    border-color: #ccc;
 }
 
-.persona-card.locked .info strong,
-.persona-card.locked .info span,
-.persona-card.locked .icon {
-  color: #aaa; /* Làm xám màu chữ */
+/* 2. Icon ổ khóa */
+.lock-icon {
+    color: #999;
+    font-size: 0.9rem;
+    margin-left: auto;
 }
 
-/* Icon ổ khóa */
-.lock-badge {
-  color: #999;
-  font-size: 1rem;
-  margin-left: auto; /* Đẩy sang phải cùng */
+/* 3. Icon vương miện (Premium đã mở) */
+.premium-icon {
+    color: #f39c12; /* Màu vàng */
+    font-size: 0.9rem;
+    margin-left: auto;
+    animation: bounce 2s infinite;
 }
 
-/* Icon vương miện (cho user đã mua gói) */
-.premium-badge {
-  color: #ffd700; /* Màu vàng kim */
-  font-size: 1rem;
-  margin-left: auto;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+@keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-3px); }
 }

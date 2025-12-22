@@ -1,66 +1,69 @@
 <?php
+// user_aibuddy/api/chatbot/get_personas.php
+
 header("Access-Control-Allow-Origin: *");
 header('Content-Type: application/json; charset=utf-8');
 session_start();
 
-// Điều chỉnh đường dẫn đến file db.php cho đúng với cấu trúc thư mục của bạn
-// user_aibuddy/api/chatbot/ -> lùi 2 cấp ra user_aibuddy -> vào config/db.php
+// Điều chỉnh đường dẫn đến file config/db.php
 require_once '../../config/db.php'; 
 
-$response = ['status' => 400, 'data' => [], 'message' => ''];
+$response = ['status' => 400, 'data' => [], 'user_plan' => 1];
 
 try {
+    // Kiểm tra đăng nhập
     if (!isset($_SESSION['userid'])) {
-        throw new Exception("User not logged in");
+        $userId = 0; 
+    } else {
+        $userId = $_SESSION['userid'];
     }
 
-    $userId = $_SESSION['userid'];
+    // --- 1. LOGIC MỚI: CHECK USER ORDER (THEO YÊU CẦU) ---
+    // Mặc định là Free (PlanID = 1)
+    $currentPlanId = 1;
 
-    // 1. LẤY PLAN ID CỦA USER (SỬA LẠI QUERY ĐÚNG)
-    // Kiểm tra trong bảng membership xem user đang dùng gói nào
-    // Lấy gói mới nhất (MembershipID lớn nhất) và còn hạn (nếu có check date)
-    $planSql = "SELECT PlanID, MembershipStatus FROM membership WHERE UserID = ? ORDER BY MembershipID DESC LIMIT 1";
-    
-    $stmt = $conn->prepare($planSql);
-    if (!$stmt) {
-        throw new Exception("Database Prepare Error: " . $conn->error);
-    }
-    
-    $stmt->bind_param("i", $userId);
-    $stmt->execute();
-    $planRes = $stmt->get_result()->fetch_assoc();
-
-    // Mặc định là gói Free (ID = 1) nếu không tìm thấy membership
-    $userPlanID = 1;
-    if ($planRes && isset($planRes['PlanID'])) {
-        $userPlanID = (int)$planRes['PlanID'];
+    if ($userId > 0) {
+        // Tìm đơn hàng thành công mới nhất của User
+        $sqlOrder = "SELECT PlanID 
+                     FROM userorder 
+                     WHERE UserID = ? AND OrderStatus = 'Completed' 
+                     ORDER BY PurchaseTime DESC 
+                     LIMIT 1";
+                    
+        $stmt = $conn->prepare($sqlOrder);
         
-        // Nếu membership bị Cancelled hoặc Expired thì quay về Free (tuỳ logic của bạn)
-        // Ví dụ: if ($planRes['MembershipStatus'] !== 'Active') $userPlanID = 1;
+        if ($stmt) {
+            $stmt->bind_param("i", $userId);
+            $stmt->execute();
+            $res = $stmt->get_result()->fetch_assoc();
+            
+            if ($res) {
+                // Nếu tìm thấy đơn hàng completed, lấy PlanID đó làm plan hiện tại
+                $currentPlanId = (int)$res['PlanID'];
+            }
+            $stmt->close();
+        }
     }
 
-    // Logic: User là Free nếu PlanID <= 1
-    $isFreeUser = ($userPlanID <= 1);
+    // Xác định quyền VIP: PlanID >= 2 (Essential hoặc Premium) là VIP
+    $isVipUser = ($currentPlanId >= 2);
 
-    // 2. LẤY DANH SÁCH PERSONA
-    // Đảm bảo bảng persona đã chạy lệnh SQL thêm cột IsPremium, Icon từ aibuddy_database_chatbot.sql
+    // --- 2. LẤY DANH SÁCH PERSONA VÀ KHÓA NẾU CẦN ---
     $sql = "SELECT PersonaID, PersonaName, Description, Icon, IsPremium FROM persona";
     $result = $conn->query($sql);
 
-    if (!$result) {
-        throw new Exception("Query Persona Error: " . $conn->error);
-    }
-
     $personas = [];
-    if ($result->num_rows > 0) {
+    if ($result && $result->num_rows > 0) {
         while ($row = $result->fetch_assoc()) {
-            // Xử lý icon mặc định nếu null
+            // Xử lý icon mặc định nếu chưa có
             if (empty($row['Icon'])) $row['Icon'] = '🤖';
 
-            // Logic khóa: Khóa nếu Persona Premium mà User lại dùng Free
+            // --- LOGIC LOCK ---
             $isLocked = false;
-            // Ép kiểu về int để so sánh cho chuẩn
-            if ((int)$row['IsPremium'] == 1 && $isFreeUser) {
+            
+            // Nếu Persona là Premium (IsPremium = 1) 
+            // VÀ User KHÔNG PHẢI VIP (đang dùng gói Free) -> Thì KHÓA
+            if ($row['IsPremium'] == 1 && !$isVipUser) {
                 $isLocked = true;
             }
 
@@ -69,10 +72,14 @@ try {
         }
     }
 
-    echo json_encode(['status' => 200, 'data' => $personas]);
+    echo json_encode([
+        'status' => 200, 
+        'data' => $personas,
+        'user_plan' => $currentPlanId, // Trả về PlanID để JS xử lý UI khác
+        'is_vip' => $isVipUser
+    ]);
 
 } catch (Exception $e) {
-    // Trả về JSON lỗi thay vì HTML để JS không bị crash
     http_response_code(500);
     echo json_encode(['status' => 500, 'message' => $e->getMessage()]);
 }

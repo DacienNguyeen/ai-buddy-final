@@ -590,54 +590,81 @@ function loadPersonas() {
         .then(data => {
             if (data.status === 200) {
                 const container = document.getElementById('persona-list-container');
-                // Nếu bạn muốn giữ tiêu đề h4 trong HTML thì dùng append, còn nếu container rỗng thì gán lại html
-                // Ở đây mình giả sử container là div chứa các card
                 container.innerHTML = ''; 
                 
                 data.data.forEach(p => {
                     const isActive = (p.PersonaID == currentPersonaId) ? 'active' : '';
                     
-                    // XỬ LÝ KHÓA
-                    let clickAction = `selectPersona(this)`; // Mặc định là cho chọn
+                    // --- XỬ LÝ UI KHÓA ---
+                    let clickAttr = `onclick="selectPersona(this)"`;
                     let lockClass = '';
-                    let lockIcon = '';
-                    
+                    let badgeHtml = '';
+
+                    // Nếu bị khóa
                     if (p.is_locked) {
-                        clickAction = `showUpgradeAlert('${p.PersonaName}')`; // Bị khóa thì hiện thông báo
-                        lockClass = 'locked';
-                        lockIcon = `<i class="fa-solid fa-lock lock-badge"></i>`;
-                    } else if (p.IsPremium == 1) {
-                         // Nếu Premium nhưng user đã mở khóa (đang dùng gói cao) -> Hiện icon vương miện cho đẹp
-                        lockIcon = `<i class="fa-solid fa-crown premium-badge"></i>`;
+                        clickAttr = `onclick="showUpgradeAlert('${p.PersonaName}')"`;
+                        lockClass = 'locked-persona'; // Class CSS làm mờ
+                        badgeHtml = `<i class="fa-solid fa-lock lock-icon"></i>`;
+                    } 
+                    // Nếu là Premium nhưng đã mở khóa (User VIP)
+                    else if (p.IsPremium == 1) {
+                         badgeHtml = `<i class="fa-solid fa-crown premium-icon"></i>`;
                     }
                     
                     const html = `
                         <div class="persona-card ${isActive} ${lockClass}" 
                              data-id="${p.PersonaID}" 
-                             onclick="${clickAction}">
-                            
+                             ${clickAttr}>
+                             
                             <span class="icon">${p.Icon}</span>
-                            
                             <div class="info">
                                 <strong>${p.PersonaName}</strong>
                                 <span>${p.Description}</span>
                             </div>
-                            
-                            ${lockIcon}
+                            ${badgeHtml}
                         </div>
                     `;
                     container.insertAdjacentHTML('beforeend', html);
                 });
+                
+                // MỞ RỘNG: Dùng data.user_plan để ẩn/hiện các tính năng khác
+                updateUIBasedOnPlan(data.user_plan);
             }
         })
-        .catch(err => console.error("Load Personas Error:", err));
+        .catch(err => {
+            console.error("Load Personas Error:", err);
+            // Fallback nếu lỗi JSON (để không trắng trang)
+             document.getElementById('persona-list-container').innerHTML = '<p style="color:red; font-size:0.8rem">Error loading personas</p>';
+        });
 }
 
-// Thêm hàm hiển thị thông báo nâng cấp
-function showUpgradeAlert(personaName) {
-    // Bạn có thể dùng SweetAlert hoặc confirm đơn giản
-    if(confirm(`🔒 ${personaName} is a Premium Persona.\nUpgrade to Essential or Premium plan to unlock!`)) {
-        window.location.href = 'AIBuddy_Trial.php';
+// Hàm cảnh báo nâng cấp
+function showUpgradeAlert(name) {
+    if(confirm(`🔒 ${name} is locked.\nUpgrade to Essential or Premium plan to unlock this persona!`)) {
+        window.location.href = 'AIBuddy_Trial.php'; // Chuyển hướng trang mua gói
+    }
+}
+
+// Hàm phụ trợ cập nhật các UI khác (Voice, v.v.)
+function updateUIBasedOnPlan(planId) {
+    const voiceBox = document.querySelector('.voice-settings-box');
+    const premiumBadge = document.querySelector('.badge-premium');
+    
+    // Nếu là gói Free (1) -> Khóa Voice nâng cao
+    if (planId <= 1) {
+        if(voiceBox) voiceBox.classList.add('disabled-box');
+        if(premiumBadge) premiumBadge.innerText = "PRO";
+    } else {
+        // Nếu đã mua gói -> Mở khóa Voice
+        if(voiceBox) {
+            voiceBox.classList.remove('disabled-box');
+            // Enable dropdown
+            const select = document.getElementById('voice-select');
+            const btn = document.querySelector('.test-voice-btn');
+            if(select) select.disabled = false;
+            if(btn) btn.disabled = false;
+        }
+        if(premiumBadge) premiumBadge.innerText = "UNLOCKED";
     }
 }
 
