@@ -10,10 +10,11 @@ let currentImageBase64 = null; // Biến lưu chuỗi ảnh
 const API_BASE = 'api/chatbot/';
 
 // Voice Config
-let isCallActive = false; // Trạng thái cuộc gọi
+let isCallActive = false; 
 let recognition;
 let synth = window.speechSynthesis;
 let silenceTimer;
+let voices = []; // Mảng chứa danh sách giọng
 
 // --- INIT --- 
 document.addEventListener('DOMContentLoaded', () => {
@@ -24,7 +25,99 @@ document.addEventListener('DOMContentLoaded', () => {
     setupImageUpload();
     loadPersonas(); 
     loadTopics();
+    
+    // Kích hoạt load giọng
+    populateVoiceList();
+    if (speechSynthesis.onvoiceschanged !== undefined) {
+        speechSynthesis.onvoiceschanged = populateVoiceList;
+    }
+
+    clearImage();
 });
+
+function populateVoiceList() {
+    voices = synth.getVoices();
+    const voiceSelect = document.getElementById('voice-select');
+    
+    if(!voiceSelect || voices.length === 0) return;
+
+    // Xóa các option cũ (trừ option đầu tiên Default)
+    // Lưu ý: View HTML đã có 1 option value="default", ta giữ nó lại
+    voiceSelect.innerHTML = '<option value="default">Default AI Buddy</option>';
+    
+    // Lọc lấy các giọng tiếng Anh để không bị rối
+    const englishVoices = voices.filter(v => v.lang.includes('en'));
+    const listToUse = englishVoices.length > 0 ? englishVoices : voices;
+
+    listToUse.forEach((voice) => {
+        const option = document.createElement('option');
+        // Làm ngắn tên hiển thị cho gọn dropdown
+        const shortName = voice.name.replace('Microsoft', '').replace('Google', '').replace('English', '').replace('United States', 'US').trim();
+        
+        option.textContent = shortName;
+        option.setAttribute('data-name', voice.name); // Lưu tên gốc để tìm lại
+        voiceSelect.appendChild(option);
+    });
+}
+
+function previewVoice() {
+    // Hàm test giọng
+    const msg = "This is my voice. I am ready to help you.";
+    speakText(msg, true);
+}
+
+function speakText(text, force = false) {
+    if (!isCallActive && !force) return;
+    if (synth.speaking) synth.cancel();
+
+    // 1. Clean Text
+    const cleanText = text
+        .replace(/([\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD10-\uDDFF])/g, '')
+        .replace(/[*#_`~]/g, '') 
+        .trim();
+
+    if (!cleanText) return; 
+
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    
+    // 2. Logic Chọn Giọng (MỚI)
+    const voiceSelect = document.getElementById('voice-select');
+    if (voiceSelect && voiceSelect.value !== 'default') {
+        const selectedOption = voiceSelect.selectedOptions[0];
+        const voiceName = selectedOption.getAttribute('data-name');
+        const selectedVoice = voices.find(v => v.name === voiceName);
+        if (selectedVoice) utterance.voice = selectedVoice;
+    } else {
+        // Fallback về giọng Google/Zira nếu để Default
+        const preferredVoice = voices.find(v => v.name.includes("Google US English") || v.name.includes("Zira"));
+        if (preferredVoice) utterance.voice = preferredVoice;
+    }
+
+    // 3. Sentiment & Rate (Giữ nguyên)
+    const sentiment = analyzeSentiment(text);
+    utterance.pitch = sentiment.pitch;
+    utterance.rate = sentiment.rate;
+
+    utterance.onstart = function() {
+        const btn = document.getElementById('call-btn');
+        if(btn) btn.classList.add('ai-speaking');
+    };
+
+    utterance.onend = function() {
+        const btn = document.getElementById('call-btn');
+        if(btn) btn.classList.remove('ai-speaking');
+        if (isCallActive && !force) {
+            setTimeout(() => { try { recognition.start(); } catch(e) {} }, 500); 
+        }
+    };
+
+    synth.speak(utterance);
+}
+
+function previewVoice() {
+    const msg = "This is a preview of my voice.";
+    speakText(msg, true); // true = force speak even if not in call mode
+}
 
 function setupUIToggles() {
     const menuToggle = document.getElementById('menu-toggle');
@@ -183,6 +276,15 @@ function speakText(text) {
         }
     };
 
+    // MỚI: Lấy giọng từ Dropdown
+    const voiceSelect = document.getElementById('voice-select');
+    const selectedOption = voiceSelect.selectedOptions[0];
+    if(selectedOption) {
+        const selectedName = selectedOption.getAttribute('data-name');
+        const selectedVoice = voices.find(v => v.name === selectedName);
+        if(selectedVoice) utterance.voice = selectedVoice;
+
+    }           
     synth.speak(utterance);
 }
 
@@ -488,23 +590,39 @@ function loadPersonas() {
         .then(data => {
             if (data.status === 200) {
                 const container = document.getElementById('persona-list-container');
-                // Giữ lại tiêu đề h4
-                container.innerHTML = '<h4>Choose Persona</h4>'; 
+                // Nếu bạn muốn giữ tiêu đề h4 trong HTML thì dùng append, còn nếu container rỗng thì gán lại html
+                // Ở đây mình giả sử container là div chứa các card
+                container.innerHTML = ''; 
                 
                 data.data.forEach(p => {
-                    // Kiểm tra xem có phải persona đang chọn không
                     const isActive = (p.PersonaID == currentPersonaId) ? 'active' : '';
                     
-                    // Xử lý icon khóa nếu là Premium
-                    const lockIcon = (p.IsPremium == 1) ? '<i class="fa-solid fa-lock premium-lock"></i>' : '';
+                    // XỬ LÝ KHÓA
+                    let clickAction = `selectPersona(this)`; // Mặc định là cho chọn
+                    let lockClass = '';
+                    let lockIcon = '';
+                    
+                    if (p.is_locked) {
+                        clickAction = `showUpgradeAlert('${p.PersonaName}')`; // Bị khóa thì hiện thông báo
+                        lockClass = 'locked';
+                        lockIcon = `<i class="fa-solid fa-lock lock-badge"></i>`;
+                    } else if (p.IsPremium == 1) {
+                         // Nếu Premium nhưng user đã mở khóa (đang dùng gói cao) -> Hiện icon vương miện cho đẹp
+                        lockIcon = `<i class="fa-solid fa-crown premium-badge"></i>`;
+                    }
                     
                     const html = `
-                        <div class="persona-card ${isActive}" data-id="${p.PersonaID}" onclick="selectPersona(this)">
+                        <div class="persona-card ${isActive} ${lockClass}" 
+                             data-id="${p.PersonaID}" 
+                             onclick="${clickAction}">
+                            
                             <span class="icon">${p.Icon}</span>
+                            
                             <div class="info">
                                 <strong>${p.PersonaName}</strong>
                                 <span>${p.Description}</span>
                             </div>
+                            
                             ${lockIcon}
                         </div>
                     `;
@@ -513,6 +631,14 @@ function loadPersonas() {
             }
         })
         .catch(err => console.error("Load Personas Error:", err));
+}
+
+// Thêm hàm hiển thị thông báo nâng cấp
+function showUpgradeAlert(personaName) {
+    // Bạn có thể dùng SweetAlert hoặc confirm đơn giản
+    if(confirm(`🔒 ${personaName} is a Premium Persona.\nUpgrade to Essential or Premium plan to unlock!`)) {
+        window.location.href = 'AIBuddy_Trial.php';
+    }
 }
 
 function loadTopics() {
