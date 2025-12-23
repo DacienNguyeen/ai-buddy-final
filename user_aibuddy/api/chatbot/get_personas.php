@@ -18,16 +18,16 @@ try {
         $userId = $_SESSION['userid'];
     }
 
-    // --- 1. LOGIC MỚI: CHECK USER ORDER (THEO YÊU CẦU) ---
+    // --- 1. LOGIC XÁC ĐỊNH GÓI DỰA TRÊN ĐƠN HÀNG MỚI NHẤT ---
     // Mặc định là Free (PlanID = 1)
     $currentPlanId = 1;
 
     if ($userId > 0) {
-        // Tìm đơn hàng thành công mới nhất của User
-        $sqlOrder = "SELECT PlanID 
+        // QUERY: Lấy đơn hàng mới nhất (OrderID lớn nhất), không quan tâm trạng thái lúc query
+        $sqlOrder = "SELECT PlanID, OrderStatus 
                      FROM userorder 
-                     WHERE UserID = ? AND OrderStatus = 'Completed' 
-                     ORDER BY PurchaseTime DESC 
+                     WHERE UserID = ? 
+                     ORDER BY OrderID DESC 
                      LIMIT 1";
                     
         $stmt = $conn->prepare($sqlOrder);
@@ -38,31 +38,39 @@ try {
             $res = $stmt->get_result()->fetch_assoc();
             
             if ($res) {
-                // Nếu tìm thấy đơn hàng completed, lấy PlanID đó làm plan hiện tại
-                $currentPlanId = (int)$res['PlanID'];
+                // LOGIC QUAN TRỌNG: Kiểm tra trạng thái đơn hàng mới nhất
+                if ($res['OrderStatus'] === 'Completed') {
+                    // Nếu thành công -> Kích hoạt gói đó
+                    $currentPlanId = (int)$res['PlanID'];
+                } else {
+                    // Nếu là 'Cancelled', 'Pending', 'Failed'... -> Quay về Free
+                    $currentPlanId = 1;
+                }
             }
+            // Nếu không tìm thấy đơn hàng nào ($res = null), mặc định vẫn là Free ($currentPlanId = 1)
             $stmt->close();
         }
     }
 
-    // Xác định quyền VIP: PlanID >= 2 (Essential hoặc Premium) là VIP
+    // --- 2. XÁC ĐỊNH QUYỀN VIP ---
+    // PlanID >= 2 (Essential hoặc Premium) là VIP
     $isVipUser = ($currentPlanId >= 2);
 
-    // --- 2. LẤY DANH SÁCH PERSONA VÀ KHÓA NẾU CẦN ---
+    // --- 3. LẤY DANH SÁCH PERSONA & XỬ LÝ KHÓA ---
     $sql = "SELECT PersonaID, PersonaName, Description, Icon, IsPremium FROM persona";
     $result = $conn->query($sql);
 
     $personas = [];
     if ($result && $result->num_rows > 0) {
         while ($row = $result->fetch_assoc()) {
-            // Xử lý icon mặc định nếu chưa có
+            // Xử lý icon mặc định
             if (empty($row['Icon'])) $row['Icon'] = '🤖';
 
-            // --- LOGIC LOCK ---
+            // --- LOGIC KHÓA ---
             $isLocked = false;
             
             // Nếu Persona là Premium (IsPremium = 1) 
-            // VÀ User KHÔNG PHẢI VIP (đang dùng gói Free) -> Thì KHÓA
+            // VÀ User KHÔNG PHẢI VIP -> KHÓA
             if ($row['IsPremium'] == 1 && !$isVipUser) {
                 $isLocked = true;
             }
@@ -72,10 +80,11 @@ try {
         }
     }
 
+    // Trả về kết quả
     echo json_encode([
         'status' => 200, 
         'data' => $personas,
-        'user_plan' => $currentPlanId, // Trả về PlanID để JS xử lý UI khác
+        'user_plan' => $currentPlanId, // PlanID thực tế đang áp dụng
         'is_vip' => $isVipUser
     ]);
 
